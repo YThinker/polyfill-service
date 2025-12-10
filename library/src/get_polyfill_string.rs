@@ -1,0 +1,611 @@
+use crate::{
+    buffer::Buffer,
+    old_ua::{self, OldUA},
+    ua::{UserAgent, UA},
+};
+use crate::{meta, BoxError, Env};
+use indexmap::IndexSet;
+use std::path::Path;
+use std::sync::Arc;
+
+use crate::{polyfill_parameters::PolyfillParameters, toposort::toposort};
+use serde::Deserialize;
+use std::collections::{HashMap, HashSet};
+use tokio::fs;
+
+macro_rules! lookup_file {
+    ( $fn:ident, $file:expr ) => {{
+        Ok(meta::$fn($file).map(Buffer::from_str))
+    }};
+}
+
+macro_rules! get_alias {
+    ( $version:expr ) => {{
+        Ok(Some(Buffer::from_str(include_str!(concat!(
+            "../../polyfill-libraries/",
+            $version,
+            "/aliases.json"
+        )))))
+    }};
+}
+
+pub(crate) fn lookup_file(version: &str, n: &str) -> Result<Option<Buffer>, BoxError> {
+    if n.ends_with("/meta.json") {
+        return match version {
+            "3.101.0" => lookup_file!(lookup_3_101_0, n),
+            "3.103.0" => lookup_file!(lookup_3_103_0, n),
+            "3.104.0" => lookup_file!(lookup_3_104_0, n),
+            "3.108.0" => lookup_file!(lookup_3_108_0, n),
+            "3.109.0" => lookup_file!(lookup_3_109_0, n),
+            "3.110.1" => lookup_file!(lookup_3_110_1, n),
+            "3.111.0" => lookup_file!(lookup_3_111_0, n),
+            "3.27.4" => lookup_file!(lookup_3_27_4, n),
+            "3.34.0" => lookup_file!(lookup_3_34_0, n),
+            "3.39.0" => lookup_file!(lookup_3_39_0, n),
+            "3.40.0" => lookup_file!(lookup_3_40_0, n),
+            "3.41.0" => lookup_file!(lookup_3_41_0, n),
+            "3.42.0" => lookup_file!(lookup_3_42_0, n),
+            "3.46.0" => lookup_file!(lookup_3_46_0, n),
+            "3.48.0" => lookup_file!(lookup_3_48_0, n),
+            "3.50.2" => lookup_file!(lookup_3_50_2, n),
+            "3.51.0" => lookup_file!(lookup_3_51_0, n),
+            "3.52.0" => lookup_file!(lookup_3_52_0, n),
+            "3.52.1" => lookup_file!(lookup_3_52_1, n),
+            "3.52.2" => lookup_file!(lookup_3_52_2, n),
+            "3.52.3" => lookup_file!(lookup_3_52_3, n),
+            "3.53.1" => lookup_file!(lookup_3_53_1, n),
+            "3.89.4" => lookup_file!(lookup_3_89_4, n),
+            "3.96.0" => lookup_file!(lookup_3_96_0, n),
+            "3.98.0" => lookup_file!(lookup_3_98_0, n),
+            "3.25.1" => lookup_file!(lookup_3_25_1, n),
+            "4.8.0" => lookup_file!(lookup_4_8_0, n),
+
+            v => {
+                eprintln!("no meta database for version {v}");
+                Ok(None)
+            }
+        };
+    }
+
+    if n == "/aliases.json" {
+        return match version {
+            "3.101.0" => get_alias!("3.101.0"),
+            "3.103.0" => get_alias!("3.103.0"),
+            "3.104.0" => get_alias!("3.104.0"),
+            "3.108.0" => get_alias!("3.108.0"),
+            "3.109.0" => get_alias!("3.109.0"),
+            "3.110.1" => get_alias!("3.110.1"),
+            "3.111.0" => get_alias!("3.111.0"),
+            "3.27.4" => get_alias!("3.27.4"),
+            "3.34.0" => get_alias!("3.34.0"),
+            "3.39.0" => get_alias!("3.39.0"),
+            "3.40.0" => get_alias!("3.40.0"),
+            "3.41.0" => get_alias!("3.41.0"),
+            "3.42.0" => get_alias!("3.42.0"),
+            "3.46.0" => get_alias!("3.46.0"),
+            "3.48.0" => get_alias!("3.48.0"),
+            "3.50.2" => get_alias!("3.50.2"),
+            "3.51.0" => get_alias!("3.51.0"),
+            "3.52.0" => get_alias!("3.52.0"),
+            "3.52.1" => get_alias!("3.52.1"),
+            "3.52.2" => get_alias!("3.52.2"),
+            "3.52.3" => get_alias!("3.52.3"),
+            "3.53.1" => get_alias!("3.53.1"),
+            "3.89.4" => get_alias!("3.89.4"),
+            "3.96.0" => get_alias!("3.96.0"),
+            "3.98.0" => get_alias!("3.98.0"),
+            "4.8.0" => get_alias!("4.8.0"),
+            "3.25.1" => get_alias!("3.25.1"),
+
+            v => {
+                eprintln!("no aliases for version {v}");
+                Ok(None)
+            }
+        };
+    }
+
+    eprintln!("lookup {n}: not found");
+    Ok(None)
+}
+
+#[allow(dead_code)]
+#[derive(Deserialize)]
+struct Browsers {
+    android: Option<String>,
+    bb: Option<String>,
+    chrome: Option<String>,
+    edge: Option<String>,
+    edge_mob: Option<String>,
+    firefox: Option<String>,
+    firefox_mob: Option<String>,
+    ie: Option<String>,
+    ie_mob: Option<String>,
+    ios_saf: Option<String>,
+    op_mini: Option<String>,
+    opera: Option<String>,
+    safari: Option<String>,
+    samsung_mob: Option<String>,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PolyfillConfig {
+    license: Option<String>,
+    dependencies: Option<Vec<String>>,
+    browsers: Option<HashMap<String, String>>,
+    detect_source: Option<String>,
+}
+
+fn lookup(version: &str, key: &str) -> Option<Vec<u8>> {
+    let value = lookup_file(version, key);
+    let mut value = match value {
+        Err(_) | Ok(None) => return None,
+        Ok(Some(value)) => value,
+    };
+    let mut bytes = Vec::new();
+    if value.read_to_end(&mut bytes).is_err() {
+        None
+    } else {
+        Some(bytes)
+    }
+}
+
+fn get_polyfill_meta(version: &str, feature_name: &str) -> Option<PolyfillConfig> {
+    if feature_name.is_empty() {
+        return None;
+    }
+    let meta = lookup(version, &format!("/{feature_name}/meta.json"));
+    let meta = match meta {
+        None => return None,
+        Some(meta) => meta,
+    };
+    serde_json::from_slice(&meta).unwrap()
+}
+
+fn get_config_aliases(version: &str, alias: &str) -> Option<Vec<String>> {
+    if alias.is_empty() {
+        return None;
+    }
+    lookup(version, &format!("/aliases.json")).and_then(|bytes| {
+        let aliases = serde_json::from_slice::<HashMap<String, Vec<String>>>(&bytes)
+            .map_err(|e| {
+                panic!(
+                    "failed to json parse alias: {} from store error: {:#?}",
+                    alias, e
+                );
+            })
+            .unwrap();
+        aliases.get(alias).cloned()
+    })
+}
+
+#[derive(Clone, Default, Debug)]
+struct FeatureProperties {
+    flags: IndexSet<String>,
+    comment: Option<String>,
+}
+
+#[derive(Debug)]
+enum U {
+    Old(OldUA),
+    Current(UA),
+}
+
+impl U {
+    fn is_unknown(&self) -> Result<bool, BoxError> {
+        match self {
+            Self::Old(u) => u.is_unknown(),
+            Self::Current(u) => u.is_unknown(),
+        }
+    }
+
+    fn get_family(&self) -> String {
+        match self {
+            Self::Old(u) => u.get_family(),
+            Self::Current(u) => u.get_family(),
+        }
+    }
+    fn satisfies(&self, range: String) -> Result<bool, BoxError> {
+        match self {
+            Self::Old(u) => u.satisfies(range),
+            Self::Current(u) => u.satisfies(range),
+        }
+    }
+}
+
+fn remove_feature(
+    feature_name: &str,
+    feature_names: &mut IndexSet<String>,
+    targeted_features: &mut HashMap<String, FeatureProperties>,
+) -> bool {
+    feature_names.remove(feature_name);
+    targeted_features.remove(feature_name).is_some()
+}
+
+fn add_feature(
+    feature_name: &str,
+    feature_flags: IndexSet<String>,
+    feature_properties: FeatureProperties,
+    // comment: Option<String>,
+    feature_names: &mut IndexSet<String>,
+    targeted_features: &mut HashMap<String, FeatureProperties>,
+) -> bool {
+    let mut properties = feature_properties;
+    properties.flags.extend(feature_flags);
+    // println!("comment: {:#?}", comment);
+    // properties.comment = match (comment.clone(), properties.comment) {
+    //     (None, None) => None,
+    //     (None, Some(comment)) => Some(comment),
+    //     (Some(comment), None) => Some(comment),
+    //     (Some(c1), Some(c2)) => Some(c1+&c2),
+    // };
+    feature_names.insert(feature_name.to_string());
+    if let Some(f) = targeted_features.get(&feature_name.to_string()) {
+        let mut f = f.clone();
+        f.flags.extend(properties.flags);
+
+        // f.comment = match (f.comment, properties.comment) {
+        //     (None, None) => comment,
+        //     (None, Some(comment)) => Some(comment),
+        //     (Some(comment), None) => Some(comment),
+        //     (Some(c1), Some(c2)) => Some(c1+&c2),
+        // };
+        return targeted_features
+            .insert(feature_name.to_string(), f)
+            .is_none();
+    }
+    targeted_features
+        .insert(feature_name.to_string(), properties)
+        .is_none()
+}
+
+fn get_polyfills(
+    options: &PolyfillParameters,
+    version: &str,
+) -> Result<HashMap<String, FeatureProperties>, BoxError> {
+    let ua = if version == "3.25.1" {
+        U::Old(old_ua::OldUA::new(&options.ua_string))
+    } else {
+        U::Current(UA::new(&options.ua_string))
+    };
+    let mut feature_names = options.features.keys().cloned().collect::<IndexSet<_>>();
+    feature_names.sort();
+    let mut targeted_features: HashMap<String, FeatureProperties> = HashMap::new();
+    let mut seen_removed: HashSet<String> = HashSet::default();
+    loop {
+        let mut breakk = true;
+        for feature_name in feature_names.clone() {
+            if options.excludes.contains(&feature_name) {
+                if remove_feature(&feature_name, &mut feature_names, &mut targeted_features) {
+                    breakk = false;
+                    // worker::console_debug!("meow exclude - {}", feature_name);
+                }
+                continue;
+            }
+
+            let feature = targeted_features
+                .get(&feature_name)
+                .cloned()
+                .unwrap_or_else(|| FeatureProperties {
+                    flags: options
+                        .features
+                        .get(&feature_name)
+                        .cloned()
+                        .unwrap_or_default(),
+                    comment: Option::default(),
+                });
+
+            let mut properties = FeatureProperties {
+                flags: IndexSet::new(),
+                comment: Option::default(),
+            };
+
+            // Handle alias logic here
+            let alias = get_config_aliases(version, &feature_name)
+                .map_or_else(Default::default, |alias| alias);
+
+            if !alias.is_empty() {
+                feature_names.remove(&feature_name);
+                for aliased_feature in &alias {
+                    if add_feature(
+                        aliased_feature,
+                        feature.flags.clone(),
+                        properties.clone(),
+                        // Some(format!("Alias of {feature_name}")),
+                        &mut feature_names,
+                        &mut targeted_features,
+                    ) {
+                        breakk = false;
+                        // worker::console_debug!("meow alias {feature_name} - {aliased_feature}");
+                        // worker::console_debug!("feature.flags {:#?}", feature.flags);
+                    }
+                }
+                continue;
+            }
+
+            let mut targeted = feature.flags.contains("always");
+
+            if !targeted {
+                let unknown_override = options.unknown == "polyfill" && ua.is_unknown()?;
+                if unknown_override {
+                    targeted = true;
+                    properties.flags.insert("gated".to_string());
+                }
+            }
+
+            let Some(meta) = get_polyfill_meta(version, &feature_name) else {
+                feature_names.remove(&feature_name);
+                if add_feature(
+                    &feature_name,
+                    IndexSet::new(),
+                    properties,
+                    // None,
+                    &mut feature_names,
+                    &mut targeted_features,
+                ) {
+                    breakk = false;
+                    // worker::console_debug!("meow unknown - {}", feature_name);
+                }
+                continue;
+            };
+
+            if !targeted {
+                if let Some(browsers) = meta.browsers {
+                    let is_browser_match =
+                        browsers.get(&ua.get_family()).map_or(false, |browser| {
+                            ua.satisfies(browser.to_string()).unwrap_or(false)
+                        });
+
+                    targeted = is_browser_match;
+                }
+            }
+
+            if targeted {
+                if feature.flags.contains("always") || !seen_removed.contains(&feature_name) {
+                    seen_removed.insert(feature_name.to_string());
+                    feature_names.remove(&feature_name);
+                    if add_feature(
+                        &feature_name,
+                        feature.flags.clone(),
+                        properties.clone(),
+                        // None,
+                        &mut feature_names,
+                        &mut targeted_features,
+                    ) {
+                        breakk = false;
+                        // worker::console_debug!("meow targeted - {}", feature_name);
+                    }
+
+                    if let Some(deps) = meta.dependencies {
+                        for dep in &deps {
+                            if add_feature(
+                                dep,
+                                feature.flags.clone(),
+                                properties.clone(),
+                                // Some(format!("Dependency of {feature_name}")),
+                                &mut feature_names,
+                                &mut targeted_features,
+                            ) {
+                                breakk = false;
+                                // worker::console_debug!("meow dep - {}", dep);
+                            }
+                        }
+                    }
+                }
+            } else {
+                if targeted_features.contains_key(&feature_name) {
+                    let f = targeted_features.get(&feature_name).unwrap();
+                    if f.flags.contains("always") {
+                        continue;
+                    }
+                }
+                if remove_feature(&feature_name, &mut feature_names, &mut targeted_features) {
+                    breakk = false;
+                    // worker::console_debug!("meow remove - {}", feature_name);
+                }
+            }
+        }
+
+        if breakk {
+            break;
+        }
+    }
+
+    Ok(targeted_features)
+}
+
+pub async fn get_polyfill_string_stream(
+    output: &mut Buffer,
+    options: &PolyfillParameters,
+    env: Arc<Env>,
+    app_version: &str,
+) -> Result<(), BoxError> {
+    let lf = if options.minify { "" } else { "\n" };
+    let app_version_text = "Polyfill service v".to_owned() + app_version;
+    let mut explainer_comment: Vec<String> = vec![];
+    // Build a polyfill bundle of polyfill sources sorted in dependency order
+    let mut targeted_features = get_polyfills(options, app_version)
+        .map_err(|err| format!("failed to get polyfills: {err}"))?;
+    let mut warnings: Vec<String> = vec![];
+    let mut feature_nodes: Vec<String> = vec![];
+    let mut feature_edges: Vec<(String, String)> = vec![];
+
+    let t = targeted_features.clone();
+    for (feature_name, feature) in &mut targeted_features {
+        let polyfill = get_polyfill_meta(app_version, feature_name);
+        match polyfill {
+            Some(polyfill) => {
+                feature_nodes.push(feature_name.to_string());
+                if let Some(deps) = polyfill.dependencies {
+                    for dep_name in deps {
+                        if t.contains_key(&dep_name) {
+                            feature_edges.push((dep_name, feature_name.to_string()));
+                        }
+                    }
+                }
+                let license = polyfill.license.unwrap_or_else(|| "CC0".to_owned());
+                feature.comment = feature
+                    .comment
+                    .clone()
+                    .map(|comment| format!("{feature_name}, License: {license} ({})", &comment))
+                    .or_else(|| Some(format!("{feature_name}, License: {license}")));
+            }
+            None => warnings.push(feature_name.to_string()),
+        }
+    }
+
+    feature_nodes.sort();
+    feature_edges.sort_by_key(|f| f.1.to_string());
+
+    let sorted_features = toposort(&feature_nodes, &feature_edges).unwrap();
+    let m = if options.minify { "min" } else { "raw" };
+    let mut sorted_features_bb = vec![];
+
+    let polyfill_sources =
+        polyfill_sources(Arc::clone(&env), &sorted_features, m, app_version).await?;
+
+    for feature_name in &sorted_features {
+        sorted_features_bb.push((
+            feature_name,
+            polyfill_sources
+                .get(&format!("/{feature_name}/{m}.js"))
+                .expect(&format!("/{feature_name}/{m}.js is present")),
+        ));
+    }
+    explainer_comment.push(app_version_text);
+    if !options.minify {
+        explainer_comment.push(
+            "For detailed credits and licence information see https://cdnjs.cloudflare.com/polyfill.".to_owned(),
+        );
+        explainer_comment.push(String::new());
+        let mut features: Vec<String> = options
+            .features
+            .keys()
+            .map(std::clone::Clone::clone)
+            .collect();
+        features.sort();
+        explainer_comment.push("Features requested: ".to_owned() + &features.join(","));
+        explainer_comment.push(String::new());
+        for feature_name in &sorted_features {
+            if let Some(feature) = targeted_features.get(feature_name) {
+                explainer_comment.push(format!("- {}", feature.comment.as_ref().unwrap()));
+            }
+        }
+        if !warnings.is_empty() {
+            explainer_comment.push(String::new());
+            explainer_comment.push("These features were not recognised:".to_owned());
+            let mut warnings = warnings
+                .iter()
+                .map(|s| "- ".to_owned() + s)
+                .collect::<Vec<String>>();
+            warnings.sort();
+            explainer_comment.push(warnings.join(","));
+        }
+    } else {
+        explainer_comment
+            .push("Disable minification (remove `.min` from URL path) for more info".to_owned());
+    }
+    output.write_str("/*\n");
+    for line in explainer_comment {
+        output.write_str(format!(" * {line}\n").as_str());
+    }
+    output.write_str("*/\n\n");
+    if !sorted_features.is_empty() {
+        // Outer closure hides private features from global scope
+        output.write_str("(function(self, undefined) {");
+        output.write_str(lf);
+
+        // Using the graph, stream all the polyfill sources in dependency order
+        for (feature_name, bb) in sorted_features_bb {
+            let wrap_in_detect = targeted_features[feature_name].flags.contains("gated");
+            if wrap_in_detect {
+                let meta = get_polyfill_meta(app_version, feature_name);
+                if let Some(meta) = meta {
+                    if let Some(detect_source) = meta.detect_source {
+                        if detect_source.is_empty() {
+                            output.append(bb);
+                        } else {
+                            output.write_str("if (!(");
+                            output.write_str(detect_source.as_str());
+                            output.write_str(")) {");
+                            output.write_str(lf);
+                            output.append(bb);
+                            output.write_str(lf);
+                            output.write_str("}");
+                            output.write_str(lf);
+                            output.write_str(lf);
+                        }
+                    } else {
+                        output.append(bb);
+                    }
+                } else {
+                    output.append(bb);
+                }
+            } else {
+                output.append(bb);
+            }
+
+            env.injected_polyfill_metric.inc();
+        }
+        // Invoke the closure, passing the global object as the only argument
+        output.write_str("})");
+        output.write_str(lf);
+        output.write_str("('object' === typeof window && window || 'object' === typeof self && self || 'object' === typeof global && global || {});");
+        output.write_str(lf);
+    } else if !options.minify {
+        output.write_str("\n/* No polyfills needed for current settings and browser */\n\n");
+        env.up_to_date_ua_metric.inc();
+    }
+    if let Some(callback) = &options.callback {
+        output.write_str("\ntypeof ");
+        output.write_str(callback);
+        output.write_str("==='function' && ");
+        output.write_str(callback);
+        output.write_str("();");
+    }
+
+    env.bytes_out_metric.inc_by(output.size() as u64);
+
+    Ok(())
+}
+
+async fn polyfill_sources(
+    env: Arc<Env>,
+    feature_names: &[String],
+    format: &str,
+    version: &str,
+) -> Result<HashMap<String, Buffer>, BoxError> {
+    let mut sources = HashMap::new();
+
+    for feature_name in feature_names {
+        let feature_path = Path::new(feature_name);
+        if feature_path
+            .components()
+            .any(|component| matches!(component, std::path::Component::ParentDir))
+        {
+            return Err(format!("invalid feature name: {feature_name}").into());
+        }
+
+        let file_path = env
+            .polyfill_base
+            .join(version)
+            .join(feature_path)
+            .join(format!("{format}.js"));
+
+        match fs::read_to_string(&file_path).await {
+            Ok(content) => {
+                env.d1_query_metric.with_label_values(&["ok"]).inc();
+                sources.insert(
+                    format!("/{feature_name}/{format}.js"),
+                    Buffer::from_string(content),
+                );
+            }
+            Err(err) => {
+                env.d1_query_metric.with_label_values(&["fs_err"]).inc();
+                return Err(format!("failed to read {}: {err}", file_path.display()).into());
+            }
+        }
+    }
+
+    Ok(sources)
+}

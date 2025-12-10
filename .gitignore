@@ -1,0 +1,10 @@
+node_modules
+bin
+dist
+pkg
+.terraform/
+target
+.cargo
+.DS_Store
+secrets/polyfill/fastly-api-key.txt
+logs*.txt

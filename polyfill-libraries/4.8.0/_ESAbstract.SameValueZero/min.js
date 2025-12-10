@@ -1,0 +1,1 @@
+function SameValueZero(e,a){return Type(e)===Type(a)&&("number"===Type(e)?!(!isNaN(e)||!isNaN(a))||(1/e==1/0&&1/a==-1/0||(1/e==-1/0&&1/a==1/0||e===a)):SameValueNonNumber(e,a))}

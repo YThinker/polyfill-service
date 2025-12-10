@@ -1,0 +1,1 @@
+function ToUint32(a){var r=Number(a);return isNaN(r)||1/r==1/0||1/r==-1/0||r===1/0||r===-1/0?0:(r<0?-1:1)*Math.floor(Math.abs(r))>>>0}

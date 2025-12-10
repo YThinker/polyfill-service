@@ -1,0 +1,1 @@
+!function(){var t=Object.prototype.toString;CreateMethodProperty(Object.prototype,"toString",function e(){"use strict";if(void 0===this)return"[object Undefined]";if(null===this)return"[object Null]";var r=ToObject(this),o=Get(r,Symbol.toStringTag);return"string"!==Type(o)?t.call(r):"[object "+o+"]"})}();

@@ -1,0 +1,1 @@
+CreateMethodProperty(Array.prototype,"flatMap",function r(t){"use strict";var e=ToObject(this),a=ToLength(Get(e,"length"));if(!1===IsCallable(t))throw new TypeError("mapperFunction is not callable.");var o;o=1 in arguments?arguments[1]:void 0;var n=ArraySpeciesCreate(e,0);return FlattenIntoArray(n,e,a,0,1,t,o),n});

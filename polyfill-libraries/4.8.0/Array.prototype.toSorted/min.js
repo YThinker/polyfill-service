@@ -1,0 +1,1 @@
+CreateMethodProperty(Array.prototype,"toSorted",function r(e){if(void 0!==e&&!1===IsCallable(e))throw new TypeError("The comparison function must be either a function or undefined");for(var t=ToObject(this),o=LengthOfArrayLike(t),a=ArrayCreate(o),n=0;n<o;)CreateDataPropertyOrThrow(a,ToString(n),t[n]),n+=1;return void 0!==e?a.sort(e):a.sort(),a});

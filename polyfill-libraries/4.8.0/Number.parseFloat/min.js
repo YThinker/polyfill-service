@@ -1,0 +1,1 @@
+!function(r,t){var e=function t(e){var a=String(e).trim(),o=r(a);return 0===o&&"-"==a.charAt(0)?-0:o};CreateMethodProperty(t,"parseFloat",e),CreateMethodProperty(Number,"parseFloat",t.parseFloat)}(parseFloat,this);

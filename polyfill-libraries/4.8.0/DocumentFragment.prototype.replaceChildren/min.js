@@ -1,0 +1,1 @@
+!function(t){function e(){for(;this.firstChild;)this.removeChild(this.firstChild);this.append.apply(this,arguments)}document.createDocumentFragment().constructor.prototype.replaceChildren=e,t.DocumentFragment.prototype.replaceChildren=e}(self);

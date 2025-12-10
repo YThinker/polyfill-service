@@ -1,0 +1,1 @@
+function ArrayCreate(r){if(1/r==-1/0&&(r=0),r>Math.pow(2,32)-1)throw new RangeError("Invalid array length");var a=[];return a.length=r,a}

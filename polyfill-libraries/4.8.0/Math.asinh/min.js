@@ -1,0 +1,1 @@
+CreateMethodProperty(Math,"asinh",function t(a){return isNaN(a)?NaN:0===a&&1/a==1/0?0:0===a&&1/a==-1/0?-0:a===1/0?1/0:a===-1/0?-1/0:Math.log(a+Math.sqrt(a*a+1))});

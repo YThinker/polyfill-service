@@ -1,0 +1,1 @@
+function IsValidIntegerIndex(e,n){return!1!==IsInteger(n)&&(1/n!=-1/0&&!(n<0||n>=e.length))}

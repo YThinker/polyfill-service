@@ -1,0 +1,1 @@
+Document.prototype.replaceChildren=Element.prototype.replaceChildren=function e(){for(;this.firstChild;)this.removeChild(this.firstChild);this.append.apply(this,arguments)};

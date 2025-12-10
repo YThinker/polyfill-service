@@ -1,0 +1,1 @@
+Document.prototype.after=Element.prototype.after=function t(){if(this.parentNode){for(var e=Array.prototype.slice.call(arguments),o=this.nextSibling,r=o?e.indexOf(o):-1;-1!==r&&(o=o.nextSibling);)r=e.indexOf(o);this.parentNode.insertBefore(_mutation(arguments),o)}},"Text"in self&&(Text.prototype.after=Element.prototype.after);

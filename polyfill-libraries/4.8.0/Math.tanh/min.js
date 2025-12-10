@@ -1,0 +1,1 @@
+CreateMethodProperty(Math,"tanh",function t(e){var r;return e===1/0?1:e===-1/0?-1:((r=Math.exp(2*e))-1)/(r+1)});

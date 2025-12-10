@@ -1,0 +1,1 @@
+!function(t,r){var e=function r(e,n){var a=String(e).trim();return t(a,n>>>0||(/^[-+]?0[xX]/.test(a)?16:10))};CreateMethodProperty(r,"parseInt",e),CreateMethodProperty(Number,"parseInt",r.parseInt)}(parseInt,this);

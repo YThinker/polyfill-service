@@ -1,0 +1,1 @@
+!function(){"use strict";function e(){return 9===this.getRootNode({composed:!0}).nodeType}function t(t){Object.defineProperty(t,"isConnected",{configurable:!0,enumerable:!0,get:e})}if("HTMLElement"in self&&"isConnected"in HTMLElement.prototype)try{delete HTMLElement.prototype.isConnected}catch(e){}"Node"in self?t(Node.prototype):(t(document),t(Element.prototype))}();

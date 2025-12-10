@@ -1,0 +1,1 @@
+CreateMethodProperty(Math,"expm1",function e(t){return isNaN(t)?NaN:0===t&&1/t==1/0?0:0===t&&1/t==-1/0?-0:t===1/0?1/0:t===-1/0?-1:t>-1e-6&&t<1e-6?t+t*t/2:Math.exp(t)-1});

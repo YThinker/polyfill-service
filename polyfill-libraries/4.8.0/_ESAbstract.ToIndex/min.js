@@ -1,0 +1,1 @@
+function ToIndex(e){if(void 0===e)var r=0;else{var n=ToInteger(e);if(n<0)throw new RangeError("integerIndex < 0");if(r=ToLength(n),!1===SameValueZero(n,r))throw new RangeError("integerIndex < 0")}return r}

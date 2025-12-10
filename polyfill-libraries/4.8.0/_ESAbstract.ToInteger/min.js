@@ -1,0 +1,1 @@
+function ToInteger(r){if("symbol"===Type(r))throw new TypeError("Cannot convert a Symbol value to a number");var o=Number(r);return isNaN(o)?0:1/o==1/0||1/o==-1/0||o===1/0||o===-1/0?o:(o<0?-1:1)*Math.floor(Math.abs(o))}

@@ -1,0 +1,1 @@
+function ToInt8(a){var t=Number(a);if(isNaN(t)||1/t==1/0||1/t==-1/0||t===1/0||t===-1/0)return 0;var r=(t<0?-1:1)*Math.floor(Math.abs(t)),o=r%Math.pow(2,8);return o>=Math.pow(2,7)?o-Math.pow(2,8):o}

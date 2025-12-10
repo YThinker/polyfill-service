@@ -1,0 +1,1 @@
+Document.prototype.remove=Element.prototype.remove=function e(){this.parentNode&&this.parentNode.removeChild(this)},"Text"in self&&(Text.prototype.remove=Element.prototype.remove),function(){var e=HTMLSelectElement.prototype.remove;HTMLSelectElement.prototype.remove=function t(o){return 0===arguments.length?Element.prototype.remove.call(this):e.call(this,o)}}();

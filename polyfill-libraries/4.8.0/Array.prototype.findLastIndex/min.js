@@ -1,0 +1,1 @@
+CreateMethodProperty(Array.prototype,"findLastIndex",function r(e){var t=ToObject(this),o=LengthOfArrayLike(t);if(!IsCallable(e))throw TypeError();for(var a=o-1;a>=0;){var n=ToString(a),i=Get(t,n);if(ToBoolean(Call(e,arguments.length>1?arguments[1]:void 0,[i,a,t])))return a;a-=1}return-1});

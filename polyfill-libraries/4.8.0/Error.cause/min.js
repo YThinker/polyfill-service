@@ -1,0 +1,1 @@
+!function(){var r=["Error","EvalError","RangeError","ReferenceError","SyntaxError","TypeError","URIError"];"AggregateError"in self&&r.push("AggregateError");for(var e=0;e<r.length;e++){var o=r[e];CreateMethodProperty(self,o,_ErrorConstructor(o))}}();

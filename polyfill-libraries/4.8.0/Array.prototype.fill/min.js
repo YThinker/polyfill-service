@@ -1,0 +1,1 @@
+CreateMethodProperty(Array.prototype,"fill",function t(e){for(var r=arguments[1],o=arguments[2],n=ToObject(this),a=ToLength(Get(n,"length")),h=ToInteger(r),i=h<0?Math.max(a+h,0):Math.min(h,a),g=void 0===o?a:ToInteger(o),M=g<0?Math.max(a+g,0):Math.min(g,a);i<M;){n[ToString(i)]=e,i+=1}return n});

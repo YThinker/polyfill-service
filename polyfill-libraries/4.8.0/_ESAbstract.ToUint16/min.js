@@ -1,0 +1,1 @@
+function ToUInt16(a){var t=Number(a);return isNaN(t)||1/t==1/0||1/t==-1/0||t===1/0||t===-1/0?0:(t<0?-1:1)*Math.floor(Math.abs(t))%Math.pow(2,16)}

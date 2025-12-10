@@ -1,0 +1,1 @@
+{"aliases":["caniuse:console-basic"],"dependencies":["console","console.log"],"spec":"https://console.spec.whatwg.org","docs":"https://developer.mozilla.org/en/docs/Web/API/console","browsers":{"firefox":"<5","ie":"*"},"detectSource":"\"console\"in self&&\"debug\"in self.console\n","baseDir":"console/debug","hasTests":true,"isTestable":true,"isPublic":true,"size":26}

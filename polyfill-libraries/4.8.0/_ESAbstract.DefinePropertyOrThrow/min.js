@@ -1,0 +1,1 @@
+function DefinePropertyOrThrow(t,r,e){var o;try{Object.defineProperty(t,r,e),o=!0}catch(t){o=!1}if(!o)throw new TypeError("Cannot define property `"+Object.prototype.toString.call(r)+"` on object `"+Object.prototype.toString.call(t)+"`")}

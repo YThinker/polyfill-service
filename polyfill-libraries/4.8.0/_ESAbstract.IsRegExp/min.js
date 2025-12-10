@@ -1,0 +1,1 @@
+function IsRegExp(e){if("object"!==Type(e))return!1;var t="Symbol"in self&&"match"in self.Symbol?Get(e,self.Symbol.match):void 0;if(void 0!==t)return ToBoolean(t);try{var l=e.lastIndex;return e.lastIndex=0,RegExp.prototype.exec.call(e),!0}catch(e){}finally{e.lastIndex=l}return!1}
