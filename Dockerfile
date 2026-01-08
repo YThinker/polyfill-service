@@ -27,6 +27,7 @@ COPY --from=builder /app/target/release/service /usr/local/bin/service
 COPY polyfill-libraries /app/polyfill-libraries
 
 ENV POLYFILL_BASE=/app/polyfill-libraries
+ENV CACHE_DIR=/app/cache-dir
 ENV PORT=8787
 
 EXPOSE 8787

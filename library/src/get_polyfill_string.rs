@@ -544,8 +544,6 @@ pub async fn get_polyfill_string_stream(
             } else {
                 output.append(bb);
             }
-
-            env.injected_polyfill_metric.inc();
         }
         // Invoke the closure, passing the global object as the only argument
         output.write_str("})");
@@ -564,7 +562,7 @@ pub async fn get_polyfill_string_stream(
         output.write_str("();");
     }
 
-    env.bytes_out_metric.inc_by(output.size() as u64);
+    // metric `bytes_out_metric` removed
 
     Ok(())
 }
@@ -594,14 +592,12 @@ async fn polyfill_sources(
 
         match fs::read_to_string(&file_path).await {
             Ok(content) => {
-                env.d1_query_metric.with_label_values(&["ok"]).inc();
                 sources.insert(
                     format!("/{feature_name}/{format}.js"),
                     Buffer::from_string(content),
                 );
             }
             Err(err) => {
-                env.d1_query_metric.with_label_values(&["fs_err"]).inc();
                 return Err(format!("failed to read {}: {err}", file_path.display()).into());
             }
         }

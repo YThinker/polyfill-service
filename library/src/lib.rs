@@ -16,8 +16,6 @@ pub(crate) type BoxError = Box<dyn std::error::Error>;
 
 pub struct Env {
     pub polyfill_base: PathBuf,
-    pub d1_query_metric: prometheus::IntCounterVec,
+    /** 不需要polyfill的UA */
     pub up_to_date_ua_metric: prometheus::IntCounter,
-    pub injected_polyfill_metric: prometheus::IntCounter,
-    pub bytes_out_metric: prometheus::IntCounter,
 }

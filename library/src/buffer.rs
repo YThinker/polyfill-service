@@ -35,4 +35,8 @@ impl Buffer {
     pub fn into_str(self) -> String {
         self.0
     }
+
+    pub fn to_string_copy(&self) -> String {
+        self.0.clone()
+    }
 }

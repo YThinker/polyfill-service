@@ -5,21 +5,9 @@ use tracing_subscriber::EnvFilter;
 fn build_env(polyfill_base: PathBuf) -> Result<Env, Box<dyn std::error::Error>> {
     Ok(Env {
         polyfill_base,
-        d1_query_metric: prometheus::IntCounterVec::new(
-            prometheus::Opts::new("polyfill_file_reads_total", "Polyfill file reads"),
-            &["status"],
-        )?,
         up_to_date_ua_metric: prometheus::IntCounter::new(
             "polyfill_up_to_date_ua_total",
             "User agents that do not need polyfills",
-        )?,
-        injected_polyfill_metric: prometheus::IntCounter::new(
-            "polyfill_injected_total",
-            "Injected polyfill count",
-        )?,
-        bytes_out_metric: prometheus::IntCounter::new(
-            "polyfill_bytes_out_total",
-            "Total bytes served",
         )?,
     })
 }

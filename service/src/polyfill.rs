@@ -89,7 +89,6 @@ pub async fn polyfill_handler(State(env): State<Arc<Env>>, req: Request) -> Resp
         "Access-Control-Allow-Methods",
         HeaderValue::from_static("GET,HEAD,OPTIONS"),
     );
-    headers.insert("X-Compress-Hint", HeaderValue::from_static("on"));
     headers.insert(
         "Content-Type",
         HeaderValue::from_static("text/javascript; charset=UTF-8"),
