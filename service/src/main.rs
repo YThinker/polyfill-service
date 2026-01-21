@@ -1,10 +1,21 @@
 use service::{router, Env};
+use std::collections::HashSet;
+use std::sync::RwLock;
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tracing_subscriber::EnvFilter;
 
 fn build_env(polyfill_base: PathBuf) -> Result<Env, Box<dyn std::error::Error>> {
+    // Use CACHE_DIR env var if set, otherwise default to "./cache-dir" directory
+    let cache_dir = std::env::var("CACHE_DIR")
+        .ok()
+        .map(PathBuf::from)
+        .filter(|p| !p.as_os_str().is_empty())
+        .or_else(|| Some(PathBuf::from("cache-dir")));
+
     Ok(Env {
         polyfill_base,
+        cache_dir,
+        empty_cache_keys: Arc::new(RwLock::new(HashSet::new())),
         up_to_date_ua_metric: prometheus::IntCounter::new(
             "polyfill_up_to_date_ua_total",
             "User agents that do not need polyfills",
