@@ -1,4 +1,5 @@
 FROM rust:1.74 as builder
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/' /etc/apt/sources.list
 
 WORKDIR /app
 
